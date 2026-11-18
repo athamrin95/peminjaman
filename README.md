@@ -6,6 +6,7 @@ This script simply checks if the code is working properly by sending/invoking a 
 `asistent.py`:<br>
 This script uses the LangChain agent framework to give the AI the necessary tool to execute user's query to find the requested item information from the
 "database".<br>
+
 Available local command:<br>
 - `/keluar`: Exits the script.<br>
 - `/perangkat`: Prints all the item information stored in the "database" locally.<br>
