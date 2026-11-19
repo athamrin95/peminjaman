@@ -14,6 +14,10 @@ from langchain.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from aturan import cari_perangkat, PSEUDO_DB
 
+MAX_MESSAGE_ROUND = 6 # How many rounds of user queries -> answer response from the agent you want to keep
+MESSAGE_LEN_LIST = []
+PREV_MESSAGE_LEN = 0
+
 def check_env(api_key:str, base_url:str, model:str) -> str:
     """Returns None if .env is loaded properly and the necessary properties are present."""
     if any(value is None or value == "" for value in(api_key, base_url, model)):
@@ -39,23 +43,20 @@ def find_devices(text:str):
     return cari_perangkat(text)
 
 @before_model
-def trim_messages_middleware(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-    """Keep history trimmed safely using LangChain's built-in message counting."""
+def trim_messages(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    """Keep only the last few rounds of messages as stated in var MAX_MESSAGE_ROUND to fit context window."""
     messages = state["messages"]
-    trimmed_messages = trim_messages(
-        messages,
-        max_tokens=6,
-        strategy="last",
-        start_on="human",
-        include_system=False,
-        token_counter=len,
-    )
-    if len(trimmed_messages) == len(messages):
-        return None
+    
+    if len(MESSAGE_LEN_LIST) <= MAX_MESSAGE_ROUND:
+        return None  
+    
+    count = MESSAGE_LEN_LIST.pop(0)
+    new_messages = messages[count:]
+    global PREV_MESSAGE_LEN; PREV_MESSAGE_LEN = len(new_messages)
     return {
         "messages": [
             RemoveMessage(id=REMOVE_ALL_MESSAGES),
-            *trimmed_messages
+            *new_messages
         ]
     }
 
@@ -84,12 +85,13 @@ def main() -> None:
         model=model,
         tools=[find_devices],
         system_prompt=system_prompt,
-        middleware=[trim_messages_middleware],
+        middleware=[trim_messages],
         checkpointer=InMemorySaver()
     )
     config: RunnableConfig = {"configurable": {"thread_id": "1"}}
 
     # Chat session until user types "/keluar"
+    global PREV_MESSAGE_LEN
     while True:
         user_input = input("Please type your query: ").strip()
         
@@ -100,8 +102,12 @@ def main() -> None:
         else:
             response = agent.invoke(
                 {"messages": [HumanMessage(content=user_input)]},
-                config,  
+                config, 
             )
+            new_message_len = len(response['messages']) - PREV_MESSAGE_LEN
+            MESSAGE_LEN_LIST.append(new_message_len)
+            PREV_MESSAGE_LEN = len(response['messages'])
+
             print(f"Agent answer: {response['messages'][-1].text}")
             print(f"Usage metadata: {response['messages'][-1].usage_metadata}")
         print()
