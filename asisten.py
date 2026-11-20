@@ -4,7 +4,6 @@ from typing import Any
 from dotenv import load_dotenv
 from langchain.agents import AgentState, create_agent
 from langchain.messages import HumanMessage
-from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.agents.middleware import Runtime, before_model
@@ -12,7 +11,10 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages.utils import trim_messages
 from langchain.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
-from aturan import cari_perangkat, PSEUDO_DB
+from aturan import DB_PATH, PSEUDO_DB
+from penyimpanan import setup_table
+from tools import ALL_TOOLS
+
 
 MAX_MESSAGE_ROUND = 6 # How many rounds of user queries -> answer response from the agent you want to keep
 MESSAGE_LEN_LIST = []
@@ -36,11 +38,6 @@ def local_command(user_input:str):
             print(f"Code: {entry['code']}; Name: {entry['name']}; Type: {entry['type']}.")
     else:
         print("Local command not recognized!")
-
-@tool
-def find_devices(text:str):
-    """Find device(s) from the database given the word/text argument"""
-    return cari_perangkat(text)
 
 @before_model
 def trim_messages(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
@@ -79,16 +76,19 @@ def main() -> None:
     Give your answer in Bahasa Indonesia.
     Only use the tool to find devices potentially stored in the database, not for every one of the user's query.
     Present your findings from the tools as-is, do not invent non-existent results.
-    If no device/match is found from find_devices, then inform the user that nothing is found.
+    If nothing is found from using the tools, then simply inform the user that whatever they are requesting for is not found.
     """
     agent = create_agent(
         model=model,
-        tools=[find_devices],
+        tools=ALL_TOOLS,
         system_prompt=system_prompt,
         middleware=[trim_messages],
         checkpointer=InMemorySaver()
     )
     config: RunnableConfig = {"configurable": {"thread_id": "1"}}
+
+    # Setup the database if it doesn't exist
+    setup_table(DB_PATH)
 
     # Chat session until user types "/keluar"
     global PREV_MESSAGE_LEN

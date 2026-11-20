@@ -1,5 +1,6 @@
 import sqlite3
 
+
 def main() -> None:
     conn = sqlite3.connect("coba.db")
     conn.execute("CREATE TABLE IF NOT EXISTS catatan (id INTEGER PRIMARY KEY, isi TEXT NOT NULL)")
