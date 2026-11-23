@@ -4,7 +4,7 @@ from penyimpanan import check_conflict, insert_record
 
 DB_PATH = "peminjaman.db"
 
-PSEUDO_DB = [
+DEVICES = [
     {"code":"LP-01", "name":"Laptop 14 inch", "type":"laptop"},
     {"code":"LP-02", "name":"Laptop 14 inch", "type":"laptop"},
     {"code":"PR-01", "name":"Projector", "type":"projector"},
@@ -16,7 +16,7 @@ def cari_perangkat(text:str) -> dict:
         return {"error":"Passed an empty string as the argument!"}
 
     found_list = []
-    for entry in PSEUDO_DB:
+    for entry in DEVICES:
         if entry["code"].casefold() == text.casefold() or entry["name"].casefold() == text.casefold() or entry["type"].casefold() == text.casefold():
             found_list.append(entry)
 
@@ -35,7 +35,7 @@ def confirmation(message:str) -> bool:
 def pinjam(code:str, name:str, date:str, duration:int, confirmation) -> dict:
     # code must be found in PSEUDO_DB
     code_found = False
-    for entry in PSEUDO_DB:
+    for entry in DEVICES:
         if entry["code"].casefold() == code.casefold():
             code_found = True
             break

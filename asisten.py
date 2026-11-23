@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages.utils import trim_messages
 from langchain.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
-from aturan import DB_PATH, PSEUDO_DB
+from aturan import DB_PATH, DEVICES
 from penyimpanan import setup_table
 from tools import ALL_TOOLS
 
@@ -34,7 +34,7 @@ def local_command(user_input:str):
         print("Exiting...")
         sys.exit(1)
     elif user_input == "perangkat":
-        for entry in PSEUDO_DB:
+        for entry in DEVICES:
             print(f"Code: {entry['code']}; Name: {entry['name']}; Type: {entry['type']}.")
     else:
         print("Local command not recognized!")

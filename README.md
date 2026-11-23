@@ -5,12 +5,14 @@ This script simply checks if the code is working properly by sending/invoking a 
 
 `asistent.py`:<br>
 This script uses the LangChain agent framework to give the AI the necessary tool to execute user's query to find the requested item information from the
-"database" (`PSEUDO_DB`). Information regarding the lending/borrowing record of devices is stored in a SQLite database (`peminjaman.db`, which will be created if none exist).<br>
+"database" (`DEVICES`). Information regarding the lending/borrowing record of devices is stored in a SQLite database (`peminjaman.db`, which will be created if none exist).<br>
 Currently one can ask the agent to check if a given device can be found in the "database" and to check if said device is currently being borrowed at a given date. Next version will include adding the ability to ask the agent to borrow a device.<br>
 
 `coba_sqlite.py`:<br>
 This script creates an empty database file called `coba.db`, adds 2 entries to it (table `catatan`) and prints them out to the terminal.<br>
 
+`coba_api.py`:<br>
+This script is a simple localhost webserver (for API testing) that uses FastAPI (run this with uvicorn).<br>
 
 Available local command:<br>
 - `/keluar`: Exits the script.<br>
@@ -25,6 +27,10 @@ You may change the AI model with a different one that's available in OpenRouter 
 
 
 Changelog:<br>
+- Version 2.5<br>
+Renamed `PSEUDO_DB` to `DEVICES` for better representation.<br>
+Added `coba_api.py`.<br>
+
 - Version 2<br>
 Added `penyimpanan.py`. This module deals with all the sql queries.<br>
 Added `tools.py`. Moved all the @tools here.<br>

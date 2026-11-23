@@ -109,7 +109,7 @@ def test_pinjam_validation_error_name_empty(temp_db, monkeypatch):
     assert len(get_records(temp_db)) == 2
 
 
-def test_pinjam_validation_error_code_not_in_pseudo_db(temp_db, monkeypatch):
+def test_pinjam_validation_error_code_not_in_devices(temp_db, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: "y")
 
     result = pinjam("LP-99", "Budi", "2026-11-21", 2, confirmation)
