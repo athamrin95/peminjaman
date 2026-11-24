@@ -27,6 +27,7 @@ def get_devices(db_path:str, start_date:str, end_date:str) -> list:
     return devices_found
 
 def check_conflict(db_path:str, code:str, start_date:str, end_date:str) -> tuple | None:
+    """Returns a conflicting schedule if exist, if not returns a None"""
     conn = sqlite3.connect(db_path)
     found = conn.execute("SELECT id, code, borrower, start, end FROM peminjaman WHERE start < ? AND ? < end AND code = ?", (end_date, start_date, code,)).fetchone()
     conn.close()

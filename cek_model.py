@@ -1,8 +1,6 @@
 import os
 import sys
 from dotenv import load_dotenv
-from langchain.agents import create_agent
-from langchain.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
 

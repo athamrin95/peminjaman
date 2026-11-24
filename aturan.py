@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from penyimpanan import check_conflict, insert_record
+from penyimpanan import check_conflict
 
 
 DB_PATH = "peminjaman.db"
@@ -25,14 +25,7 @@ def cari_perangkat(text:str) -> dict:
     
     return {"success":f"Found the following: {found_list}."}
 
-def confirmation(message:str) -> bool:
-    user_input = input(f"{message}. (y/n)? ")
-    if user_input.strip().casefold() == "y":
-        return True
-    else:
-        return False
-
-def pinjam(code:str, name:str, date:str, duration:int, confirmation) -> dict:
+def periksa_argumen_pinjam(code:str, name:str, date:str, duration:int) -> dict | None:
     # code must be found in PSEUDO_DB
     code_found = False
     for entry in DEVICES:
@@ -55,20 +48,12 @@ def pinjam(code:str, name:str, date:str, duration:int, confirmation) -> dict:
     # duration must be between 1 - 7 (days)
     if duration < 1 or duration > 7:
         return {"error": "The borrowing duration must be between 1 - 7 days!"}
-    
+
+    # Check if there is a conflicting schedule in the database
     end_date = start_date + timedelta(days=duration)
-    start_date = str(start_date)
-    end_date = str(end_date)
-    # The same device (denoted by their code) cannot be borrowed by multiple person at any given time
-    if check_conflict(DB_PATH, code, start_date, end_date) is not None:
-        return{"error": f"There is a conflicting schedule for {code} for the selected date {start_date} to {end_date}."}
-
-    message = f"Confirm the borrowing of {code} under the name of {name} from {start_date} to {end_date}."
-    if not confirmation(message):
-        return {"error": f"User has selected to not confirm the borrowing of {code} under the name of {name} from {start_date} to {end_date}."}
-
-    result = insert_record(DB_PATH, code, name, start_date, end_date)
-    if result is None:
-        return{"error": f"There is a conflicting schedule for {code} for the selected date {start_date} to {end_date}."}
-
-    return result
+    start_date_str = str(start_date)
+    end_date_str = str(end_date)
+    if check_conflict(DB_PATH, code, start_date_str, end_date_str) is not None:
+        return{"error": f"There is a conflicting schedule for {code} for the selected date {start_date_str} to {end_date_str}."}
+    
+    return None
