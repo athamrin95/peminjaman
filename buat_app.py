@@ -13,11 +13,11 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages.utils import trim_messages
 from langchain.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
-from langgraph.config import get_config
+from langgraph.types import Command
 from pydantic import BaseModel
 from aturan import DB_PATH, DEVICES
 from penyimpanan import get_records, setup_table
-from tools import ALL_TOOLS
+from tools import ALL_TOOLS, check_borrow_conditions
 
 
 MAX_MESSAGE_ROUND = 6 # How many previous rounds of user queries -> agent response you want to keep.
@@ -62,9 +62,9 @@ async def lifespan(app: FastAPI):
         model=os.getenv("OPENAI_MODEL"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         base_url=os.getenv("OPENAI_BASE_URL"),
-        use_responses_api=True
     )
-    system_prompt = """
+    system_prompt = f"""
+    Today's date is {datetime.now().date()}
     Give your answer in Bahasa Indonesia.
     Only use the tool to find devices potentially stored in the database, not for every one of the user's query.
     Present your findings from the tools as-is, do not invent non-existent results.
@@ -78,10 +78,12 @@ async def lifespan(app: FastAPI):
             trim_messages,
             HumanInTheLoopMiddleware(
                 interrupt_on={
-                    "borrow_a_device": {"allowed_decisions": ["approve", "reject"]},
-                    #"when": writes_outside_workspace,
+                    "borrow_a_device": {
+                        "allowed_decisions": ["approve", "reject"], 
+                        "when": check_borrow_conditions,
+                    },
                 },
-                description_prefix="Tool execution pending approval",
+                interrupt_mode="per_call",
             ),
         ],
         checkpointer=InMemorySaver()
@@ -96,6 +98,11 @@ async def lifespan(app: FastAPI):
 class ChatPayload(BaseModel):
     session_id: str
     query: str
+
+class ConfirmationPayload(BaseModel):
+    session_id: str
+    interrupt_id: str
+    confirmation: bool
 
 app = FastAPI(lifespan=lifespan)
 
@@ -122,17 +129,52 @@ def chat(payload: ChatPayload, request: Request):
     if not clean_query:
         raise HTTPException(status_code=400, detail="Empty query!")
 
-    config: RunnableConfig = {"configurable": {"thread_id": payload.session_id}}
+    config: RunnableConfig = {"configurable": {"thread_id": clean_session_id}}
     response = request.app.state.agent.invoke(
         {"messages": [HumanMessage(content=clean_query)]},
-        config,
+        config=config,
+        version="v2",
     )
 
+    interrupt_list = []
     for interrupt in response.interrupts:
-        print(interrupt.value)
-    
+        interrupt_list.append({"id":interrupt.id, "text": interrupt.value})
+
     return {
-        "session_id": payload.session_id,
-        "answer": response["messages"][-1].text,
-        "usage_metadata": response["messages"][-1].usage_metadata,
+        "answer": response.value["messages"][-1].text if response.value["messages"][-1].text != "" else None,
+        "confirmation": interrupt_list if interrupt_list else None,
+    }
+
+@app.post("/konfirmasi")
+def confirmation(payload: ConfirmationPayload, request: Request):
+    clean_session_id = payload.session_id.strip()
+    clean_interrupt_id = payload.interrupt_id.strip()
+    clean_confirmation = payload.confirmation
+    if not clean_session_id:
+        raise HTTPException(status_code=400, detail="Empty session_id!")
+    if not clean_interrupt_id:
+        raise HTTPException(status_code=400, detail="Empty interrupt_id!")
+    if not isinstance(clean_confirmation, bool):
+        raise HTTPException(status_code=400, detail="Confirmation must be true or false!")
+
+    decision = {}
+    if payload.confirmation:
+        decision[clean_interrupt_id] = {"type": "approve"}
+    else:
+        decision[clean_interrupt_id] = {"type": "reject", "message": "User rejected the confirmation."}
+
+    config: RunnableConfig = {"configurable": {"thread_id": clean_session_id}}
+    response = request.app.state.agent.invoke(
+        Command(resume=decision),
+        config=config,
+        version="v2",
+    )
+
+    interrupt_list = []
+    for interrupt in response.interrupts:
+        interrupt_list.append({"id":interrupt.id, "text": interrupt.value})
+
+    return {
+        "answer": response.value["messages"][-1].text if response.value["messages"][-1].text != "" else None,
+        "confirmation": interrupt_list if interrupt_list else None,
     }

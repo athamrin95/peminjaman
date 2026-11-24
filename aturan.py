@@ -55,5 +55,6 @@ def periksa_argumen_pinjam(code:str, name:str, date:str, duration:int) -> dict |
     end_date_str = str(end_date)
     if check_conflict(DB_PATH, code, start_date_str, end_date_str) is not None:
         return{"error": f"There is a conflicting schedule for {code} for the selected date {start_date_str} to {end_date_str}."}
-    
+
+    # Success! No error is found
     return None
