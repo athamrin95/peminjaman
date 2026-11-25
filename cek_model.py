@@ -7,14 +7,14 @@ from langchain_openai import ChatOpenAI
 def check_env(api_key:str, base_url:str, model:str) -> str:
     """Returns None if .env is loaded properly and the necessary properties are present."""
     if any(value is None or value == "" for value in(api_key, base_url, model)):
-        return "OPENAI_API_KEY, OPENAI_BASE_URL, and/or OPENAI_MODEL is missing or cannot be read from your .env file. Exiting..."
+        return "OPENROUTER_API_KEY, OPENROUTER_BASE_URL, and/or OPENAI_MODEL is missing or cannot be read from your .env file. Exiting..."
     else:
         return None
 
 def main() -> None:
     # Load the .env properties first
     load_dotenv()
-    result = check_env(os.getenv("OPENAI_API_KEY"), os.getenv("OPENAI_BASE_URL"), os.getenv("OPENAI_MODEL"))
+    result = check_env(os.getenv("OPENROUTER_API_KEY"), os.getenv("OPENROUTER_BASE_URL"), os.getenv("OPENAI_MODEL"))
     if result:
         print(result)
         sys.exit(1)
